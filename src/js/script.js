@@ -1,8 +1,18 @@
-rickGet();
-// mortySearch();
+var characterRM;
+var variantsCharecters = [];
+var page = 1;
+var totalpages = 0;
+var fiterType = "name";
+this.persona = [];
+this.listCharacters = document.getElementById('lista');
+this.selectSearch = document.getElementById('selectSearch');
+this.inputSearch = document.getElementById('inputSearch');
+//Form change
+document.getElementById("submitSearch").addEventListener("click", submitSearch);
 
-function rickGet(){
-	var characterRM;
+/** Chamada de todos os dados */
+function rickGet() {
+	console.log('Start');
 	const query = `
 		query {
 			characters {
@@ -20,7 +30,6 @@ function rickGet(){
 			}
 		}
 	`;
-
 	fetch('https://rickandmortyapi.com/graphql', {
 		method: 'POST',
 		headers: {
@@ -28,50 +37,253 @@ function rickGet(){
 		},
 		body: JSON.stringify({ query }),
 	})
-	.then(response => response.json())
-	.then(data => {
-		characterRM = data.data.characters;
-		const characters = data.data.characters.results;
-    	// Exibir a lista de personagens
-		characters.forEach(character => {
-			console.log(character);
+		.then(responseGET => responseGET.json())
+		.then(dataGET => {
+			totalpages = dataGET?.data.characters.info.pages;
+			characterRM = dataGET.data.characters;
+			// const characters = dataGET.data.characters.results;
+			// characters.forEach(character => {
+			// 	console.log(character);
+			// });
+			//console.log(characterRM);
+			//mortySearch(totalpages);
+			if (characterRM) {
+				listaCharacters(characterRM.results);
+			}
+		})
+		.catch(error => {
+			console.error('Erro ao carregar os dados:', error);
+			this.error = `
+			<div class="col-12">
+				<div class=''>
+					<h2>Erro em carregar a lista tente novamente mais tarde</h2>
+				</div>
+			</div>
+			`;
+			this.listCharacters.innerHTML = this.error;
 		});
-		console.log(characterRM);
+}
 
-		if(characterRM){
-			carouselRM(characterRM.results);
+/** Busca */
+function submitSearch() {
+	this.persona = [];
+	this.selectSearch = document.getElementById('selectSearch');
+	this.inputSearch = document.getElementById('inputSearch');
+	if(this.selectSearch.value === 'status'){
+		switch(this.inputSearch.value) {
+			case "Viva":
+			case "Vivo":
+			case "vivo":
+			case "viva":
+				this.inputSearch.value = 'Alive';
+				break;
+			case "Morta":
+			case "Morto":
+			case "morto":
+			case "morta":
+				this.inputSearch.value = 'Dead';
+				break;
+			default:
+				console.log('¡WUBBA LUBBA DUB DUB!');
+		}
+		if(this.inputSearch.value === 'Alive' || this.inputSearch.value === 'Dead'){
+			mortySearch(page, this.selectSearch.value, this.inputSearch.value);
+		}else{
+			this.persona = `<div class="col-12">
+				<div class=''>
+					<h2>Status inválido, descubra se está vivo ou morto e tente novamente!</h2>
+				</div>
+			</div>`;
+			this.listCharacters.innerHTML = this.persona;
+		}
+
+	}else{
+		mortySearch(page, this.selectSearch.value, this.inputSearch.value);
+	}
+	
+}
+
+function mortySearch(page, fiterType, search) {
+	console.log('Busca');
+	const query = `query {
+		characters(page: ${page}, filter: { ${fiterType}: "${search}" }) {
+			info {
+				pages
+				count
+			}
+			results {
+				id
+				name
+				species
+				status
+				image
+			}
+		}
+	}`;
+	console.log(query);
+	fetch('https://rickandmortyapi.com/graphql', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ query }),
+	}).then(response => response.json())
+	.then(data => {
+		const searchQuery = data.data.characters.results;
+		if (searchQuery) {
+			listaCharacters(searchQuery);
 		}
 	})
 	.catch(error => {
 		console.error('Erro ao carregar os dados:', error);
-	});
-}
-function mortySearch(){
-
-}
-
-function carouselRM(data){
-	console.log(data);
-	this.classcarousel = document.getElementById('carouselInner');
-	this.prod=``;
-	for (var i = 0; i < data.length; i++) {
-		this.prod += `
-		<div class='carousel-item ${i == 0? 'active' : ''}'>
-			<div class='row px-4 px-lg-5'>
-				<div class='col-12 col-md-6'>
-					<img src="${data[i].image}" class="img-fluid max-img" alt="" srcset="${data[i].image}">
-				</div>
-				<div class='col-12 col-md-6'>
-					<h2>${data[i].name}</h2>
-					<p><strong>Nome:</strong> ${data[i].name}</p>
-					<p><strong>Espécie:</strong> ${data[i].species}</p>
-					<p><strong>Status:</strong> ${data[i].status}</p>
+		this.error = `
+			<div class="col-12">
+				<div class=''>
+					<h2>Erro em carregar a lista tente novamente mais tarde</h2>
 				</div>
 			</div>
-		</div>`;
-	}
-	this.classcarousel.innerHTML = this.prod;
+		`;
+		this.listCharacters.innerHTML = this.error;
+	});
 }
+
+/** Paginação */
+function pagination(total) {
+
+}
+
+function alternativesGet(name, page) {
+	const nome = name;
+	const variante = [];
+	const query = `query {
+		characters(page: ${page}, filter: { name: "${nome}" }) {
+			info {
+				pages
+				count
+			}
+			results {
+				id
+				name
+				species
+				status
+				image
+			}
+		}
+
+	}`;
+	fetch('https://rickandmortyapi.com/graphql', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ query }),
+	}).then(response => response.json())
+	.then(data => {
+			const total = data.data.characters.info.pages;
+			const variants = data.data.characters.results;
+			//console.log(total);
+			variants.forEach(character => {
+				//console.log(character.name);
+				if(total > 1){
+					for (let index = 1; index <= total; index++) {
+						let element = variantsGet(character.name, index);
+						//console.log(element);
+					}
+					variantsGet(character.name, page++);
+				}else{
+					variantsCharecters.push(character.name);
+				}
+				// for (let index = 1; index <= total; index++) {
+				// 	const element = variantsGet(character.name, index);
+				// 	console.log(element);
+				// }
+			});
+			return variantsCharecters;
+			/*variants.forEach(character => {
+				variante.push(character.name)
+				console.log(variante);
+			});*/
+	})
+	.catch(error => {
+			console.error('Erro ao carregar os dados:', error);
+	});
+}
+
+function variantsGet(name, page){
+	const query = `query {
+		characters(page: ${page}, filter: { name: "${name}" }) {
+			info {
+				pages
+				count
+			}
+			results {
+				id
+				name
+				species
+				status
+				image
+			}
+		}
+	}`;
+	fetch('https://rickandmortyapi.com/graphql', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ query }),
+		}
+	).then(response => response.json())
+	.then(data => {
+		//console.log(data.data.characters.results);
+		const vari = data.data.characters.results;
+		vari.forEach(character => {
+			// 	console.log(character);
+		});
+		return data.data.characters.results;
+	}).catch(error => {
+		console.error('Erro ao carregar os dados:', error);
+	});
+}
+
+function listaCharacters(_data){
+	this.listCharacters.innerHTML = '';
+	this.persona = [];
+	if(_data != ""){
+		for (var i = 0; i < _data.length; i++) {
+			const teste = _data[i].name.split(" ", 1);
+			alternativesGet(teste, page);
+			//console.log(variantsCharecters);
+			this.persona += `<div class="col-6 col-lg-3">
+				<div class='py-2'>
+					<img src="${_data[i].image}" class="img-fluid max-img" alt="" srcset="${_data[i].image}">
+				</div>
+				<div class='py-2'>
+					<h2>${_data[i].name}</h2>
+					<p><strong>Nome:</strong> ${_data[i].name}</p>
+					<p><strong>Espécie:</strong> ${_data[i].species}</p>
+					<p><strong>Status:</strong> ${_data[i].status}</p>
+					<p><strong>Variantes:</strong> </p>
+				</div>
+			</div>`;
+		}
+		this.listCharacters.innerHTML = this.persona;
+	}else{
+		this.persona = `<div class="col-12">
+			<div class=''>
+				<h2>Não foi encontrado seres vivos ou mortos nesta lista, tente novamente!</h2>
+			</div>
+		</div>`;
+		this.listCharacters.innerHTML = this.persona;
+	}
+}
+
+rickGet();
+
+
+
+
+
+
 
 //modelo search
 
