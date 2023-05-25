@@ -1,7 +1,9 @@
 var characterRM;
 var variantsCharecters = [];
 var page = 1;
-var totalpages = 0;
+this.totalpages = 0;
+var pageItens = 20;
+var dados = [];
 var fiterType = "name";
 this.persona = [];
 this.listCharacters = document.getElementById('lista');
@@ -11,11 +13,10 @@ this.inputSearch = document.getElementById('inputSearch');
 document.getElementById("submitSearch").addEventListener("click", submitSearch);
 
 /** Chamada de todos os dados */
-function rickGet() {
-	console.log('Start');
+function rickGet(page) {
 	const query = `
 		query {
-			characters {
+			characters (page: ${page}, filter: {}) {
 				info {
 					pages
 					count
@@ -39,17 +40,16 @@ function rickGet() {
 	})
 		.then(responseGET => responseGET.json())
 		.then(dataGET => {
-			totalpages = dataGET?.data.characters.info.pages;
+			this.totalpages = dataGET?.data.characters.info.pages;
 			characterRM = dataGET.data.characters;
-			// const characters = dataGET.data.characters.results;
-			// characters.forEach(character => {
-			// 	console.log(character);
-			// });
-			//console.log(characterRM);
-			//mortySearch(totalpages);
 			if (characterRM) {
 				listaCharacters(characterRM.results);
 			}
+			if(page===1){
+				pagination(page, characterRM.results);
+				createPagination(this.totalpages, characterRM.results);
+			}
+			
 		})
 		.catch(error => {
 			console.error('Erro ao carregar os dados:', error);
@@ -86,25 +86,12 @@ function submitSearch() {
 			default:
 				console.log('¡WUBBA LUBBA DUB DUB!');
 		}
-		if(this.inputSearch.value === 'Alive' || this.inputSearch.value === 'Dead'){
-			mortySearch(page, this.selectSearch.value, this.inputSearch.value);
-		}else{
-			this.persona = `<div class="col-12">
-				<div class=''>
-					<h2>Status inválido, descubra se está vivo ou morto e tente novamente!</h2>
-				</div>
-			</div>`;
-			this.listCharacters.innerHTML = this.persona;
-		}
-
-	}else{
-		mortySearch(page, this.selectSearch.value, this.inputSearch.value);
 	}
+	mortySearch(page, this.selectSearch.value, this.inputSearch.value);
 	
 }
 
 function mortySearch(page, fiterType, search) {
-	console.log('Busca');
 	const query = `query {
 		characters(page: ${page}, filter: { ${fiterType}: "${search}" }) {
 			info {
@@ -120,7 +107,6 @@ function mortySearch(page, fiterType, search) {
 			}
 		}
 	}`;
-	console.log(query);
 	fetch('https://rickandmortyapi.com/graphql', {
 		method: 'POST',
 		headers: {
@@ -129,9 +115,32 @@ function mortySearch(page, fiterType, search) {
 		body: JSON.stringify({ query }),
 	}).then(response => response.json())
 	.then(data => {
+		this.totalpages = data.data.characters.info.pages;
 		const searchQuery = data.data.characters.results;
-		if (searchQuery) {
-			listaCharacters(searchQuery);
+		if(fiterType === `status`){
+			if(search === `Alive` || search === `Dead`) {
+				if (searchQuery) {
+					listaCharacters(searchQuery);
+				}
+			}else{
+				this.persona = `
+					<div class="col-12">
+						<div class=''>
+							<h2>Status inválido, descubra se está vivo ou morto e tente novamente!</h2>
+						</div>
+					</div>
+				`;
+				this.listCharacters.innerHTML = this.persona;
+			}
+
+		}else{
+			if (searchQuery) {
+				listaCharacters(searchQuery);
+			}
+		}
+		if(page===1){
+			pagination(page, searchQuery);
+			createPagination(this.totalpages, searchQuery);
 		}
 	})
 	.catch(error => {
@@ -148,10 +157,54 @@ function mortySearch(page, fiterType, search) {
 }
 
 /** Paginação */
-function pagination(total) {
-
+function pagination(page, data) {
+	console.log(page);
+	console.log(data);
+	const inicio = (page - 1) * 20;
+  	const fim = inicio + 20;
+  	const itensPagina = data.slice(inicio, fim);
+	console.log(itensPagina);
+	listaCharacters(itensPagina);
+	//return itensPagina;
 }
 
+function changePagination(total, page, data){
+	console.log(total);
+	console.log(page);
+	console.log(data);
+	if (page < 1 || page > total) {
+		return;
+	}
+	const paginaAtual = page;
+	console.log(paginaAtual);
+  	//const itensPagina = paginar(dados, itensPorPagina, paginaAtual);
+  	pagination(page, data);
+}
+
+function createPagination(total, data) {
+	const pageElement = document.getElementById('pagination');
+	let page = 0;
+	// Limpa os elementos de páginação existentes
+	while (pageElement.firstChild) {
+	  pageElement.removeChild(pageElement.firstChild);
+	}
+  
+	// Cria os elementos de páginação
+	for (let i = 1; i <= total; i++) {
+	  const paginaElemento = document.createElement('div');
+	  paginaElemento.className='col-1';
+	  paginaElemento.textContent = i;
+  
+	  // Adiciona um manipulador de evento para chamar a função mudarPagina ao clicar na página
+	  paginaElemento.addEventListener('click', function () {
+		changePagination(total,i,data);
+	  });
+  
+	  pageElement.appendChild(paginaElemento);
+	}
+  }
+
+/** Variantes */
 function alternativesGet(name, page) {
 	const nome = name;
 	const variante = [];
@@ -245,13 +298,14 @@ function variantsGet(name, page){
 	});
 }
 
+/** Lista de exibição */
 function listaCharacters(_data){
 	this.listCharacters.innerHTML = '';
 	this.persona = [];
 	if(_data != ""){
 		for (var i = 0; i < _data.length; i++) {
 			const teste = _data[i].name.split(" ", 1);
-			alternativesGet(teste, page);
+			//alternativesGet(teste, page);
 			//console.log(variantsCharecters);
 			this.persona += `<div class="col-6 col-lg-3">
 				<div class='py-2'>
@@ -277,53 +331,4 @@ function listaCharacters(_data){
 	}
 }
 
-rickGet();
-
-
-
-
-
-
-
-//modelo search
-
-// query {
-// 	characters(page: 1, filter: { name: "rick" }) {
-// 	  info {
-// 		pages
-// 		count
-// 	  }
-// 	  results {
-// 		id
-// 		name
-// 		status
-// 		species
-// 		type
-// 		gender
-// 		image
-// 	  }
-// 	}
-// 	location(id: 1) {
-// 	  id
-// 	}
-// 	episodesByIds(ids: [1, 2]) {
-// 	  id
-// 	}
-//   }
-
-// All get
-// query {
-//     characters {
-//       info {
-//         pages
-//         count
-//       }
-//       results {
-//         id
-//         name
-//         species
-//         status
-//         image
-//       }
-//     }
-//   }
+rickGet(page);
