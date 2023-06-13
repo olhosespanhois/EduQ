@@ -1,5 +1,7 @@
 <h1 align="center">Teste de desenvolvimento com Graphql</h1>
 
+Teste para a empresa Eduq
+
 ## Autora
 
 - [@olhosespanhois](https://github.com/olhosespanhois/)
